@@ -11,17 +11,30 @@
 #include "config.h"
 
 // =====================================================================
+//  Motor direction polarity (wiring compensation)
+// =====================================================================
+// DIR_FWD_1 / DIR_FWD_2 are the two direction-pin levels that make a wheel
+// spin so the robot drives FORWARD. The original sketch assumed (LOW, HIGH),
+// but on this robot the motor leads are wired the other way round, so a
+// commanded "forward" actually drove the robot BACKWARD — and every turn came
+// out mirrored. Flipping these two values inverts ALL motion at once (advance,
+// reverse, turns and strafes) with no rewiring. If "forward" ever drives the
+// robot backward again, swap these two values back.
+#define DIR_FWD_1  HIGH
+#define DIR_FWD_2  LOW
+
+// =====================================================================
 //  Front Right wheel
 // =====================================================================
 void FR_fwd(int speed) {
-    digitalWrite(RightMotorDirPin1, LOW);
-    digitalWrite(RightMotorDirPin2, HIGH);
+    digitalWrite(RightMotorDirPin1, DIR_FWD_1);
+    digitalWrite(RightMotorDirPin2, DIR_FWD_2);
     analogWrite(speedPinR, speed);
 }
 
 void FR_bck(int speed) {
-    digitalWrite(RightMotorDirPin1, HIGH);
-    digitalWrite(RightMotorDirPin2, LOW);
+    digitalWrite(RightMotorDirPin1, DIR_FWD_2);
+    digitalWrite(RightMotorDirPin2, DIR_FWD_1);
     analogWrite(speedPinR, speed);
 }
 
@@ -29,14 +42,14 @@ void FR_bck(int speed) {
 //  Front Left wheel
 // =====================================================================
 void FL_fwd(int speed) {
-    digitalWrite(LeftMotorDirPin1, LOW);
-    digitalWrite(LeftMotorDirPin2, HIGH);
+    digitalWrite(LeftMotorDirPin1, DIR_FWD_1);
+    digitalWrite(LeftMotorDirPin2, DIR_FWD_2);
     analogWrite(speedPinL, speed);
 }
 
 void FL_bck(int speed) {
-    digitalWrite(LeftMotorDirPin1, HIGH);
-    digitalWrite(LeftMotorDirPin2, LOW);
+    digitalWrite(LeftMotorDirPin1, DIR_FWD_2);
+    digitalWrite(LeftMotorDirPin2, DIR_FWD_1);
     analogWrite(speedPinL, speed);
 }
 
@@ -44,14 +57,14 @@ void FL_bck(int speed) {
 //  Rear Right wheel
 // =====================================================================
 void RR_fwd(int speed) {
-    digitalWrite(RightMotorDirPin1B, LOW);
-    digitalWrite(RightMotorDirPin2B, HIGH);
+    digitalWrite(RightMotorDirPin1B, DIR_FWD_1);
+    digitalWrite(RightMotorDirPin2B, DIR_FWD_2);
     analogWrite(speedPinRB, speed);
 }
 
 void RR_bck(int speed) {
-    digitalWrite(RightMotorDirPin1B, HIGH);
-    digitalWrite(RightMotorDirPin2B, LOW);
+    digitalWrite(RightMotorDirPin1B, DIR_FWD_2);
+    digitalWrite(RightMotorDirPin2B, DIR_FWD_1);
     analogWrite(speedPinRB, speed);
 }
 
@@ -59,14 +72,14 @@ void RR_bck(int speed) {
 //  Rear Left wheel
 // =====================================================================
 void RL_fwd(int speed) {
-    digitalWrite(LeftMotorDirPin1B, LOW);
-    digitalWrite(LeftMotorDirPin2B, HIGH);
+    digitalWrite(LeftMotorDirPin1B, DIR_FWD_1);
+    digitalWrite(LeftMotorDirPin2B, DIR_FWD_2);
     analogWrite(speedPinLB, speed);
 }
 
 void RL_bck(int speed) {
-    digitalWrite(LeftMotorDirPin1B, HIGH);
-    digitalWrite(LeftMotorDirPin2B, LOW);
+    digitalWrite(LeftMotorDirPin1B, DIR_FWD_2);
+    digitalWrite(LeftMotorDirPin2B, DIR_FWD_1);
     analogWrite(speedPinLB, speed);
 }
 

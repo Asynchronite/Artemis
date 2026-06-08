@@ -15,8 +15,8 @@
 //  Default motor speeds (PWM duty cycle, 0–255)
 // =====================================================================
 // Used by setup demos and as a sensible starting point for line-following.
-#define SPEED       100
-#define TURN_SPEED  100
+#define SPEED       50
+#define TURN_SPEED  50
 
 // =====================================================================
 //  Motor pins — front pair (driven by the RIGHT MODEL-X driver board)
@@ -49,22 +49,101 @@
 #define LCD_ROWS  2
 
 // =====================================================================
-//  IR line-tracker pins (OSOYOO 5-channel digital tracker)
+//  Ultrasonic distance sensors (3x HC-SR04, driven by the NewPing library)
 // =====================================================================
-// Channels are numbered left-to-right when looking down at the robot from
-// above with the front of the chassis pointing away from you:
-//   CH0 = far left, CH2 = center, CH4 = far right.
-// Wire each OUT pin from the tracker to one of these Mega digital inputs.
-// TODO: replace the placeholder pin numbers below with your actual wiring.
-#define IR_CH0_PIN  A0
-#define IR_CH1_PIN  A1
-#define IR_CH2_PIN  A2
-#define IR_CH3_PIN  A3
-#define IR_CH4_PIN  A4
+// Three HC-SR04s — front, left, and right. There is deliberately no rear
+// sensor. Each one needs its own trigger and echo line; NewPing pulses TRIG
+// and times the echo for us. All six pins below are free of the motor and I2C
+// assignments above. Front keeps the 48/49 pair from the standalone
+// ultrasound bring-up sketch.
+#define ULTRASONIC_FRONT_TRIG_PIN  47
+#define ULTRASONIC_FRONT_ECHO_PIN  46
+#define ULTRASONIC_LEFT_TRIG_PIN   49
+#define ULTRASONIC_LEFT_ECHO_PIN   48
+#define ULTRASONIC_RIGHT_TRIG_PIN  51
+#define ULTRASONIC_RIGHT_ECHO_PIN  50
 
-// Most OSOYOO 5-channel trackers pull their OUT pin LOW when the channel is
-// above a dark line on a light surface. If your line is light on dark, or
-// the tracker's onboard inverter is wired the other way, change this to HIGH.
-#define IR_LINE_ACTIVE  LOW
+// Maximum range to listen for, in centimetres, shared by all three sensors.
+// NewPing stops waiting for an echo past this distance (reporting the reading
+// as out-of-range), which also caps how long a single ping can block. 400 cm
+// is the HC-SR04's practical ceiling.
+#define ULTRASONIC_MAX_CM    400
+
+// How many pulses to take per reading. NewPing's ping_median() fires this many
+// pings ~29 ms apart and returns the MIDDLE value, which throws out one-off
+// spikes and — crucially — the cross-talk you get when two nearby walls echo
+// into a third sensor (the usual cause of a phantom "wall" on an open side, and
+// of a surprise SPIN). 1 = single fast ping; 3 is a robust default; higher is
+// steadier but slower (each extra sample adds ~29 ms to that sensor's read).
+#define ULTRASONIC_PING_SAMPLES  3
+
+// =====================================================================
+//  Maze-following behaviour (consumed by loop() in src/main.cpp)
+// =====================================================================
+// Strategy selector — change THIS ONE LINE and re-upload to switch how the
+// robot solves the maze:
+//     MAZE_GREEDY      steer toward whichever direction is most open (default)
+//     MAZE_RIGHT_HAND  keep the right-hand wall (classic maze solver)
+//     MAZE_LEFT_HAND   keep the left-hand wall (mirror image)
+#define MAZE_GREEDY      0
+#define MAZE_RIGHT_HAND  1
+#define MAZE_LEFT_HAND   2
+#define MAZE_STRATEGY    MAZE_GREEDY
+
+// SAFETY SWITCH. Set to 0 to run the full sense/decide/display loop with the
+// motors held STOPPED — perfect for bench-testing sensors, the LCD and the
+// decision logic without the robot driving off the table. Set to 1 once it's
+// in the maze and you actually want it to move.
+#define MAZE_DRIVE_MOTORS    1   // 0 = bench-safe (no motion); set to 1 in the maze
+
+// Forward / turning speeds while solving (PWM duty cycle, 0–255). A touch
+// brisker than the SPEED demo default for responsiveness; lower them if the
+// robot overshoots corners.
+#define MAZE_CRUISE_SPEED   100
+#define MAZE_TURN_SPEED     120
+
+// A FRONT reading at or below this many centimetres counts as "wall ahead —
+// stop driving straight and turn." Tune to the robot's stopping distance.
+#define FRONT_STANDOFF_CM    25
+
+// A side needs at least this much room (cm) to count as an opening worth
+// turning into. Make it comfortably wider than the robot's body.
+#define SIDE_CLEARANCE_CM    22
+
+// Greedy hysteresis: only veer toward a side instead of driving straight when
+// that side has at least this many EXTRA centimetres of room over the front.
+// Stops the robot wiggling when front and side clearances are nearly equal.
+#define TURN_BIAS_CM         25
+
+// Corner turns are a simple, predictable STOP -> PAUSE -> TURN -> PAUSE -> go
+// sequence, so the motion is easy to watch and calibrate:
+//   1. the moment a corner is detected (wall ahead + an open side), the robot
+//      STOPS dead,
+//   2. waits TURN_PAUSE_MS so momentum settles,
+//   3. spins in place for exactly TURN_TIME_MS (a fixed time, not sensor-based),
+//   4. STOPS and waits TURN_PAUSE_MS again,
+//   5. drives FORWARD for POST_TURN_FWD_MS to pull clear of the junction, then
+//   6. resumes following.
+// It never drives forward while a wall is straight ahead, so it can't knock a
+// wall down: if one timed turn isn't quite enough, it just stops and does
+// another the same way.
+//
+// Step 5 fixes the "turns into the same opening twice" problem: right after a
+// turn the side sensor still sees the corridor it just came out of, so a plain
+// follower would immediately turn back into it. Driving forward first carries
+// the (rear-mounted) side sensors past the junction before it looks again.
+//
+//   TURN_TIME_MS     : how long the spin lasts. Calibrate to about a 90° turn at
+//                      MAZE_TURN_SPEED — RAISE if it under-rotates (turns too
+//                      little), LOWER if it over-rotates.
+//   TURN_PAUSE_MS    : the short settle time it holds still before and after the
+//                      turn. Keep it small.
+//   POST_TURN_FWD_MS : how long to drive straight after a turn before it may turn
+//                      again. RAISE if it still turns back into the junction;
+//                      LOWER if it overruns a real turn just past a corner. If a
+//                      wall comes up ahead first, it stops early and re-decides.
+#define TURN_TIME_MS      750
+#define TURN_PAUSE_MS     1000
+#define POST_TURN_FWD_MS  1000
 
 #endif // ARTEMIS_CONFIG_H
